@@ -15,6 +15,51 @@ function CreateOrder() {
   const [address, setAddress] =
     useState("");
 
+  // ADDRESS SUGGESTIONS
+  const [suggestions, setSuggestions] =
+    useState([]);
+
+  // CUSTOMER LOCATION
+  const [customerLat, setCustomerLat] =
+    useState(null);
+
+  const [customerLng, setCustomerLng] =
+    useState(null);
+
+  // ADDRESS SEARCH
+  const handleAddressSearch =
+    async (value) => {
+
+      setAddress(value);
+
+      if (value.length < 3) {
+
+        setSuggestions([]);
+
+        return;
+
+      }
+
+      try {
+
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${value}&format=json&addressdetails=1&limit=5`
+        );
+
+        const data =
+          await res.json();
+
+        setSuggestions(data);
+
+      } catch (err) {
+
+        console.log(err);
+
+      }
+
+    };
+
+  // PLACE ORDER
   async function placeOrder() {
 
     try {
@@ -24,8 +69,13 @@ function CreateOrder() {
         !item ||
         !address
       ) {
-        alert("Please fill all fields");
+
+        alert(
+          "Please fill all fields"
+        );
+
         return;
+
       }
 
       const user = JSON.parse(
@@ -33,27 +83,33 @@ function CreateOrder() {
       );
 
       if (!user) {
-        alert("User not logged in");
+
+        alert(
+          "User not logged in"
+        );
+
         return;
+
       }
 
       // RANDOM PRICE
       const price =
-        Math.floor(Math.random() * 400) +
-        100;
+        Math.floor(
+          Math.random() * 400
+        ) + 100;
 
       const { data, error } =
         await supabase
           .from("orders")
+
           .insert([
             {
-              customer_id: user.email,
-
-              customer_name:
-                customerName,
 
               customer_id:
                 user.email,
+
+              customer_name:
+                customerName,
 
               item: item,
 
@@ -66,15 +122,31 @@ function CreateOrder() {
 
               address: address,
 
+              // REAL LOCATION
+              customer_lat:
+                customerLat,
+
+              customer_lng:
+                customerLng,
+
               status: "Pending",
 
               assigned_to: null,
 
+              assigned_delivery_boy:
+                null,
+
+              delivery_lat: null,
+
+              delivery_lng: null,
+
               price: price,
 
               total: price,
+
             },
           ])
+
           .select();
 
       console.log(data);
@@ -101,6 +173,7 @@ function CreateOrder() {
         setCustomerName("");
         setItem("");
         setAddress("");
+        setSuggestions([]);
 
         navigate("/customer");
 
@@ -165,6 +238,8 @@ function CreateOrder() {
             Create Order
           </h1>
 
+          {/* CUSTOMER NAME */}
+
           <input
             type="text"
             placeholder="👤 Customer Name"
@@ -177,27 +252,96 @@ function CreateOrder() {
             style={styles.input}
           />
 
+          {/* FOOD ITEM */}
+
           <input
             type="text"
             placeholder="🍔 Food Item"
             value={item}
             onChange={(e) =>
-              setItem(e.target.value)
+              setItem(
+                e.target.value
+              )
             }
             style={styles.input}
           />
+
+          {/* ADDRESS */}
 
           <input
             type="text"
             placeholder="📍 Delivery Address"
             value={address}
             onChange={(e) =>
-              setAddress(
+              handleAddressSearch(
                 e.target.value
               )
             }
             style={styles.input}
           />
+
+          {/* SUGGESTIONS */}
+
+          {
+            suggestions.length > 0 && (
+
+              <div
+                style={
+                  styles.suggestionsBox
+                }
+              >
+
+                {
+                  suggestions.map(
+                    (place) => (
+
+                      <div
+
+                        key={
+                          place.place_id
+                        }
+
+                        onClick={() => {
+
+                          setAddress(
+                            place.display_name
+                          );
+
+                          setCustomerLat(
+                            place.lat
+                          );
+
+                          setCustomerLng(
+                            place.lon
+                          );
+
+                          setSuggestions(
+                            []
+                          );
+
+                        }}
+
+                        style={
+                          styles.suggestionItem
+                        }
+                      >
+
+                        {
+                          place.display_name
+                        }
+
+                      </div>
+
+                    )
+                  )
+                }
+
+              </div>
+
+            )
+          }
+
+          {/* BUTTON */}
 
           <button
             style={styles.button}
@@ -287,7 +431,8 @@ const styles = {
     border:"1px solid rgba(255,255,255,0.08)",
     borderRadius:"35px",
     padding:"40px",
-    backdropFilter:"blur(20px)"
+    backdropFilter:"blur(20px)",
+    position:"relative"
   },
 
   heading:{
@@ -305,6 +450,23 @@ const styles = {
     background:"rgba(255,255,255,0.08)",
     color:"white",
     fontSize:"18px"
+  },
+
+  suggestionsBox:{
+    background:"#0f172a",
+    borderRadius:"20px",
+    overflow:"hidden",
+    marginTop:"-15px",
+    marginBottom:"20px",
+    border:"1px solid rgba(255,255,255,0.08)"
+  },
+
+  suggestionItem:{
+    padding:"15px",
+    cursor:"pointer",
+    borderBottom:
+      "1px solid rgba(255,255,255,0.08)",
+    color:"white"
   },
 
   button:{
